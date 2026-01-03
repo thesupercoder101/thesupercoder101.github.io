@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel - The Chat</title>
+  <link rel="stylesheet" href="style.css">
+
+  <script type="module">
+    // ====== ADMIN PASSWORD ======
+    const ADMIN_PASSWORD = "supersecret"; // change this to your admin password
+    let ok = false;
+
+    while (!ok) {
+      const p = prompt("Admin password:");
+      if (p === null) {
+        // go back to main chat if cancelled
+        location.href = "index.html";
+      } else if (p === ADMIN_PASSWORD) {
+        ok = true;
+      }
+    }
+
+    // ====== FIREBASE IMPORTS ======
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getDatabase, ref, remove 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // ====== SAME FIREBASE CONFIG ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfiHEgGZSgbVfR1ghKsKBj3iGnaBHWM9s",
+      authDomain: "thechat-f9c94.firebaseapp.com",
+      databaseURL: "https://thechat-f9c94-default-rtdb.firebaseio.com",
+      projectId: "thechat-f9c94",
+      storageBucket: "thechat-f9c94.firebasestorage.app",
+      messagingSenderId: "765122820358",
+      appId: "1:765122820358:web:a7b97edbe27733e096c687"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // ====== CLEAR CHAT FUNCTION ======
+    window.adminApp = {
+      clearChat: async () => {
+        if (!confirm("Clear ALL chat messages? This cannot be undone.")) return;
+
+        await remove(ref(db, "messages"));
+        alert("Chat cleared.");
+      }
+    };
+  </script>
+</head>
+<body>
+  <div class="chat-wrapper">
+    <h1>Admin Panel</h1>
+    <p>You are logged in as admin.</p>
+    <button class="danger" onclick="adminApp.clearChat()">Clear All Messages</button>
+    <p class="small-note">This deletes everything under <code>/messages</code> in the database.</p>
+    <p><a href="index.html">Back to chat</a></p>
+  </div>
+</body>
+</html>
