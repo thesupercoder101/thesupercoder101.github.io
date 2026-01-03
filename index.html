@@ -6,27 +6,14 @@
   <link rel="stylesheet" href="style.css">
 
   <script type="module">
-    // ====== SIMPLE SITE PASSWORD ======
-    const SITE_PASSWORD = "chatpass"; // change this to your password
-    let entered = false;
-
-    while (!entered) {
-      const p = prompt("Enter password to join chat:");
-      if (p === null) {
-        // User cancelled – reload to keep asking
-        location.reload();
-      } else if (p === SITE_PASSWORD) {
-        entered = true;
-      }
-    }
-
-    // ====== FIREBASE IMPORTS (FROM CDN) ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, onAuthStateChanged, signOut 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { 
       getDatabase, ref, push, onChildAdded, query, limitToLast 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // ====== YOUR FIREBASE CONFIG (YOUR REAL VALUES) ======
     const firebaseConfig = {
       apiKey: "AIzaSyBfiHEgGZSgbVfR1ghKsKBj3iGnaBHWM9s",
       authDomain: "thechat-f9c94.firebaseapp.com",
@@ -38,61 +25,74 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    // ====== SEND MESSAGE FUNCTION ======
-    window.chatApp = {
-      sendMessage: () => {
-        const nameInput = document.getElementById("name");
-        const msgInput = document.getElementById("message");
-        const name = nameInput.value.trim();
-        const text = msgInput.value.trim();
-
-        if (!name) {
-          alert("Please enter your name.");
-          return;
-        }
-        if (!text) {
-          return;
-        }
-
-        push(ref(db, "messages"), {
-          name: name,
-          message: text,
-          createdAt: Date.now()
-        });
-
-        msgInput.value = "";
-        msgInput.focus();
-      }
-    };
-
-    // ====== LISTEN FOR NEW MESSAGES ======
     window.addEventListener("DOMContentLoaded", () => {
       const chatContainer = document.getElementById("chat");
-      const messagesRef = query(ref(db, "messages"), limitToLast(100));
+      const nameInput = document.getElementById("name");
+      const msgInput = document.getElementById("message");
+      const userInfo = document.getElementById("user-info");
 
-      onChildAdded(messagesRef, snapshot => {
-        const data = snapshot.val();
-        const name = data.name || "Anon";
-        const message = data.message || "";
-        const time = data.createdAt ? new Date(data.createdAt) : null;
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
 
-        const row = document.createElement("div");
-        row.className = "message-row";
+        userInfo.textContent = `Logged in as ${user.email}`;
 
-        const meta = time 
-          ? `${name} · ${time.toLocaleTimeString()}`
-          : name;
+        const messagesRef = query(ref(db, "messages"), limitToLast(100));
+        onChildAdded(messagesRef, snapshot => {
+          const data = snapshot.val();
+          const name = data.name || "Anon";
+          const message = data.message || "";
+          const time = data.createdAt ? new Date(data.createdAt) : null;
 
-        row.innerHTML = `
-          <div class="message-meta">${meta}</div>
-          <div class="message-text">${escapeHtml(message)}</div>
-        `;
+          const row = document.createElement("div");
+          row.className = "message-row";
 
-        chatContainer.appendChild(row);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+          const meta = time 
+            ? `${name} · ${time.toLocaleTimeString()}`
+            : name;
+
+          row.innerHTML = `
+            <div class="message-meta">${meta}</div>
+            <div class="message-text">${escapeHtml(message)}</div>
+          `;
+
+          chatContainer.appendChild(row);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
       });
+
+      window.chatApp = {
+        sendMessage: () => {
+          const user = auth.currentUser;
+          if (!user) {
+            window.location.href = "login.html";
+            return;
+          }
+
+          const displayName = nameInput.value.trim() || "Anon";
+          const text = msgInput.value.trim();
+          if (!text) return;
+
+          push(ref(db, "messages"), {
+            name: displayName,
+            message: text,
+            createdAt: Date.now(),
+            uid: user.uid
+          });
+
+          msgInput.value = "";
+          msgInput.focus();
+        },
+        logout: async () => {
+          await signOut(auth);
+          window.location.href = "login.html";
+        }
+      };
 
       function escapeHtml(str) {
         return str
@@ -106,13 +106,15 @@
 <body>
   <div class="chat-wrapper">
     <h1>The Chat Room</h1>
+    <div id="user-info" class="user-info"></div>
     <div class="controls">
-      <input id="name" type="text" placeholder="Your name">
+      <input id="name" type="text" placeholder="Your display name">
       <input id="message" type="text" placeholder="Type a message and press Send">
       <button onclick="chatApp.sendMessage()">Send</button>
     </div>
     <div id="chat" class="chat-box"></div>
     <div class="footer">
+      <button onclick="chatApp.logout()">Log out</button>
       <a href="admin.html" target="_blank">Admin</a>
     </div>
   </div>
