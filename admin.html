@@ -6,27 +6,14 @@
   <link rel="stylesheet" href="style.css">
 
   <script type="module">
-    // ====== ADMIN PASSWORD ======
-    const ADMIN_PASSWORD = "supersecret"; // change this to your admin password
-    let ok = false;
-
-    while (!ok) {
-      const p = prompt("Admin password:");
-      if (p === null) {
-        // go back to main chat if cancelled
-        location.href = "index.html";
-      } else if (p === ADMIN_PASSWORD) {
-        ok = true;
-      }
-    }
-
-    // ====== FIREBASE IMPORTS ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, onAuthStateChanged, signOut 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { 
       getDatabase, ref, remove 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // ====== SAME FIREBASE CONFIG ======
     const firebaseConfig = {
       apiKey: "AIzaSyBfiHEgGZSgbVfR1ghKsKBj3iGnaBHWM9s",
       authDomain: "thechat-f9c94.firebaseapp.com",
@@ -38,26 +25,57 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    // ====== CLEAR CHAT FUNCTION ======
-    window.adminApp = {
-      clearChat: async () => {
-        if (!confirm("Clear ALL chat messages? This cannot be undone.")) return;
+    const ADMIN_EMAIL = "admin@chat.com"; // Use your real admin email (not a password)
 
-        await remove(ref(db, "messages"));
-        alert("Chat cleared.");
-      }
-    };
+    window.addEventListener("DOMContentLoaded", () => {
+      const info = document.getElementById("admin-info");
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        if (user.email !== ADMIN_EMAIL) {
+          info.textContent = "You are not an admin.";
+          return;
+        }
+
+        info.textContent = `Admin: ${user.email}`;
+      });
+
+      window.adminApp = {
+        clearChat: async () => {
+          const user = auth.currentUser;
+          if (!user || user.email !== ADMIN_EMAIL) {
+            alert("Not authorized.");
+            return;
+          }
+
+          if (!confirm("Clear ALL chat messages? This cannot be undone.")) return;
+
+          await remove(ref(db, "messages"));
+          alert("Chat cleared.");
+        },
+        logout: async () => {
+          await signOut(auth);
+          window.location.href = "login.html";
+        }
+      };
+    });
   </script>
 </head>
 <body>
   <div class="chat-wrapper">
     <h1>Admin Panel</h1>
-    <p>You are logged in as admin.</p>
+    <div id="admin-info" class="user-info"></div>
     <button class="danger" onclick="adminApp.clearChat()">Clear All Messages</button>
     <p class="small-note">This deletes everything under <code>/messages</code> in the database.</p>
     <p><a href="index.html">Back to chat</a></p>
+    <button onclick="adminApp.logout()">Log out</button>
   </div>
 </body>
 </html>
