@@ -72,8 +72,10 @@ h1 {
 
 .footer {
   margin-top: 12px;
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
+  align-items: center;
 }
 
 .footer a {
@@ -101,4 +103,42 @@ h1 {
 .small-note {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.user-info {
+  font-size: 13px;
+  margin-bottom: 10px;
+  color: #9ca3af;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-form input {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #262626;
+  color: #f5f5f5;
+}
+
+.login-form button {
+  padding: 8px;
+  border-radius: 4px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+.login-form button:hover {
+  background: #2563eb;
+}
+
+.error-text {
+  color: #f97373;
+  font-size: 12px;
 }
